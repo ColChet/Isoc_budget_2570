@@ -33,6 +33,7 @@
   .total-card .value{font-size:22px;font-weight:700;color:var(--navy);line-height:1.2}
   .total-card .unit{font-size:12px;color:var(--muted);margin-top:4px}
   .total-card.highlight .value{color:var(--gold)}
+  .total-card.active-total{border:2px solid var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.15)}
 
   /* SEC TITLE */
   .sec-title{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:28px 0 14px;display:flex;align-items:center;gap:10px}
@@ -158,16 +159,23 @@ function renderTotals(w) {
   const workUnits = w ? Object.values(DATA.detail[String(w.work_id)]||{}).flat().length : provSet.size;
   const workTotal = w ? w.total : grand;
   const workLabel = w ? w.name : 'ทุกงาน';
-  document.getElementById('totals-row').innerHTML = [
-    {label:'งบประมาณรวมทั้งสิ้น', value: fmt(grand)+' บาท', unit:'ปีงบประมาณ 2570 (ทุกงาน)'},
-    {label:'งบประมาณ — '+workLabel, value: fmt(workTotal)+' บาท', unit:'งานที่เลือก', hl:true},
-    {label:'หน่วยงานที่ได้รับจัดสรร', value: workUnits+' หน่วย', unit:'ในงาน '+workLabel},
-  ].map(c=>`
-    <div class="total-card${c.hl?' highlight':''}">
-      <div class="label">${c.label}</div>
-      <div class="value">${c.value}</div>
-      <div class="unit">${c.unit}</div>
-    </div>`).join('');
+  const isAll = !w;
+  document.getElementById('totals-row').innerHTML = `
+    <div class="total-card${isAll?' highlight active-total':''}" onclick="selectAll()" style="cursor:pointer" title="คลิกเพื่อดูยอดรวมทุกงาน">
+      <div class="label">งบประมาณรวมทั้งสิ้น</div>
+      <div class="value">${fmt(grand)} บาท</div>
+      <div class="unit">ปีงบประมาณ 2570 (ทุกงาน) ${isAll?'<span style=\'color:var(--gold)\'>◀ แสดงอยู่</span>':''}</div>
+    </div>
+    <div class="total-card${!isAll?' highlight':''}">
+      <div class="label">งบประมาณ — ${workLabel}</div>
+      <div class="value">${fmt(workTotal)} บาท</div>
+      <div class="unit">${isAll?'คลิกงานด้านล่างเพื่อดูรายงาน':'งานที่เลือก'}</div>
+    </div>
+    <div class="total-card">
+      <div class="label">หน่วยงานที่ได้รับจัดสรร</div>
+      <div class="value">${workUnits} หน่วย</div>
+      <div class="unit">${isAll?'ทุกงานรวมกัน':'ในงาน '+workLabel}</div>
+    </div>`;
 }
 
 // ── WORK CARDS ──
@@ -188,6 +196,19 @@ function renderWorkCards() {
 }
 
 // ── SELECT WORK ──
+function selectAll() {
+  // ยกเลิก highlight การ์ดงาน
+  document.querySelectorAll('.work-card').forEach(c=>c.classList.remove('active'));
+  document.getElementById('detail-title').textContent = 'ภาพรวมทุกงาน';
+  renderTotals(null);
+  // activity table ว่าง
+  document.getElementById('act-table').innerHTML =
+    `<thead><tr><th>งาน</th><th style="text-align:right">ยอดรวม (บาท)</th></tr></thead>
+     <tbody>${DATA.summary.map(s=>`<tr><td>${s.name}</td><td style="text-align:right;font-weight:600">${fmt(s.total)}</td></tr>`).join('')}</tbody>
+     <tfoot><tr class="act-tfoot"><td>รวมทั้งสิ้น</td><td style="text-align:right">${fmt(DATA.grand_total)}</td></tr></tfoot>`;
+  renderRegionList(DATA.all_by_region||{});
+}
+
 function selectWork(idx) {
   document.querySelectorAll('.work-card').forEach((c,i)=>c.classList.toggle('active',i===idx));
   const w = DATA.summary[idx];
@@ -311,7 +332,7 @@ document.getElementById('today-date').textContent =
 
 renderWorkCards();
 renderDonut();
-selectWork(0);
+selectAll();
 </script>
 </body>
 </html>
